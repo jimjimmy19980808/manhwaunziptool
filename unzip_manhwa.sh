@@ -9,6 +9,15 @@
 DEFAULT_START=~/storage/shared
 
 # ---------- helpers ----------
+#
+# NOTE: browse_folder() and search_folder() are called as
+#   TARGET="$(browse_folder ...)"
+# Command substitution $(...) captures EVERYTHING the function writes
+# to stdout. So every line that is just UI (menus, headers, lists)
+# must be sent to stderr (>&2) instead — only the final selected path
+# should go to stdout. `read -p` prompts already go to stderr by
+# default, which is why they showed up before even though the rest of
+# the screen did not.
 
 # Interactive folder browser.
 # Lets the user navigate directories one level at a time, like a file
@@ -18,33 +27,39 @@ browse_folder() {
     local current="$1"
 
     while true; do
-        clear
-        echo "=================================="
-        echo "   Select Folder"
-        echo "=================================="
-        echo "Current path:"
-        echo "  $current"
-        echo "----------------------------------"
+        clear >&2
+        {
+            echo "=================================="
+            echo "   Select Folder"
+            echo "=================================="
+            echo "Current path:"
+            echo "  $current"
+            echo "----------------------------------"
+        } >&2
 
         mapfile -t SUBDIRS < <(find "$current" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
 
         if [ ${#SUBDIRS[@]} -eq 0 ]; then
-            echo "  (no subfolders here)"
+            echo "  (no subfolders here)" >&2
         else
             local i=1
             for d in "${SUBDIRS[@]}"; do
-                echo "  $i) ${d##*/}/"
+                echo "  $i) ${d##*/}/" >&2
                 i=$((i+1))
             done
         fi
 
-        echo "----------------------------------"
-        echo "  0) Select THIS folder"
+        {
+            echo "----------------------------------"
+            echo "  0) Select THIS folder"
+        } >&2
         if [ "$current" != "/" ]; then
-            echo "  b) Go back (parent folder)"
+            echo "  b) Go back (parent folder)" >&2
         fi
-        echo "  q) Cancel"
-        echo
+        {
+            echo "  q) Cancel"
+            echo
+        } >&2
 
         read -p "Choice: " choice
 
@@ -76,25 +91,25 @@ browse_folder() {
 search_folder() {
     local root="$1"
     read -p "Enter part of the folder name: " KEYWORD
-    echo
-    echo "Searching..."
+    echo >&2
+    echo "Searching..." >&2
     mapfile -t MATCHES < <(find "$root" -type d -iname "*$KEYWORD*" 2>/dev/null | sort)
 
     if [ ${#MATCHES[@]} -eq 0 ]; then
-        echo "No matching folder found."
+        echo "No matching folder found." >&2
         return 1
     fi
 
-    echo
-    echo "Folders found:"
+    echo >&2
+    echo "Folders found:" >&2
     for i in "${!MATCHES[@]}"; do
-        echo "  $((i+1))) ${MATCHES[$i]}"
+        echo "  $((i+1))) ${MATCHES[$i]}" >&2
     done
-    echo
+    echo >&2
     read -p "Enter the number of the folder you want: " CHOICE
     idx=$((CHOICE-1))
     if [ -z "${MATCHES[$idx]}" ]; then
-        echo "Invalid choice."
+        echo "Invalid choice." >&2
         return 1
     fi
     echo "${MATCHES[$idx]}"
