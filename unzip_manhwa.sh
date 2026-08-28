@@ -37,7 +37,15 @@ browse_folder() {
             echo "----------------------------------"
         } >&2
 
-        mapfile -t SUBDIRS < <(find "$current" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+        current="${current%/}"
+        [ -z "$current" ] && current="/"
+
+        SUBDIRS=()
+        shopt -s nullglob
+        for d in "$current"/*/; do
+            SUBDIRS+=("${d%/}")
+        done
+        shopt -u nullglob
 
         if [ ${#SUBDIRS[@]} -eq 0 ]; then
             echo "  (no subfolders here)" >&2
