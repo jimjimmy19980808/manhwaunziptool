@@ -1,20 +1,26 @@
 # Manhwa Zip Password Remover
 
-اسکریپت باشی برای Termux (اندروید) که به‌صورت تعاملی رمز فایل‌های زیپ رو
-داخل یه پوشه (و همه زیرپوشه‌هاش) برمی‌داره — رمز رو یکبار وارد می‌کنید و
-همه فایل‌ها با همون رمز پردازش میشن.
+A Termux (Android) bash script that interactively strips the password
+protection from zip archives inside a folder (and all its subfolders) —
+you enter the password once, and every archive under that folder gets
+processed with it.
 
-## قابلیت‌ها
+The script's output is in English on purpose: Termux's terminal does
+not render right-to-left (Persian/Arabic) text correctly, so English
+avoids garbled output.
 
-- گرفتن رمز به‌صورت مخفی (مثل فرم لاگین، روی صفحه نمایش داده نمی‌شه)
-- سه حالت انتخاب پوشه:
-  1. **مرور پوشه‌ها** — مثل فایل‌منیجر، پوشه‌به‌پوشه جلو/عقب می‌رید
-  2. **جستجو** — بخشی از اسم پوشه رو می‌نویسید و از نتایج انتخاب می‌کنید
-  3. **مسیر دستی** — مسیر کامل رو مستقیم تایپ می‌کنید
-- تشخیص خودکار فایل‌های رمزدار (فایل‌های بدون رمز رو دست نمی‌زنه)
-- خلاصه نهایی: چند فایل انجام شد / ناموفق بود / رد شد
+## Features
 
-## پیش‌نیازها (نصب در Termux)
+- Password entry is hidden (like a login prompt, never shown on screen)
+- Three ways to pick the target folder:
+  1. **Browse folders** — navigate step by step, like a file manager
+  2. **Search** — type part of a folder name and pick from the matches
+  3. **Manual path** — type the full path directly
+- Automatically detects which zip files are actually encrypted (files
+  that already have no password are left untouched)
+- Final summary: how many files were done / failed / skipped
+
+## Requirements (install in Termux)
 
 ```bash
 pkg update -y
@@ -22,34 +28,36 @@ pkg install -y p7zip zip unzip termux-api git
 termux-setup-storage
 ```
 
-بعد از اجرای `termux-setup-storage` اجازه دسترسی به حافظه رو روی گوشی
-تایید (Allow) کنید.
+After running `termux-setup-storage`, approve the storage permission
+prompt on your phone.
 
-## نصب
+## Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/manhwa-unzip-tool.git
-cd manhwa-unzip-tool
+git clone https://github.com/jimjimmy19980808/manhwaunziptool.git
+cd manhwaunziptool
 chmod +x unzip_manhwa.sh
 ```
 
-## استفاده
+## Usage
 
 ```bash
 ./unzip_manhwa.sh
 ```
 
-اسکریپت اول رمز رو می‌پرسه، بعد حالت انتخاب پوشه رو، و در نهایت همه
-زیپ‌های رمزدار داخل اون پوشه (و زیرپوشه‌هاش) رو بدون رمز می‌سازه.
+The script first asks for the password, then how you want to pick the
+folder, and finally rebuilds every encrypted zip under that folder
+(and its subfolders) without a password.
 
-## نکات مهم
+## Important notes
 
-- فایل zip اصلی (رمزدار) بعد از موفقیت **حذف** می‌شه و با نسخه بدون رمز
-  جایگزین می‌شه. اگه لازمه، قبل از اجرا از پوشه‌تون بک‌آپ بگیرید.
-- اگه رمز اشتباه باشه یا فایل خراب باشه، اون فایل به‌عنوان `failed`
-  گزارش می‌شه و دست‌نخورده باقی می‌مونه.
-- فایل‌هایی که از قبل رمز ندارن به‌عنوان `skip` رد می‌شن.
+- The original (encrypted) zip file is **deleted** after a successful
+  conversion and replaced by the password-free version. Back up your
+  folder first if you need to keep the originals.
+- If the password is wrong or a file is corrupted, that file is
+  reported as `FAILED` and left untouched.
+- Files that already have no password are reported as `SKIP`.
 
-## لایسنس
+## License
 
 MIT

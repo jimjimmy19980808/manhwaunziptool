@@ -10,10 +10,6 @@ DEFAULT_START=~/storage/shared
 
 # ---------- helpers ----------
 
-pause() {
-    read -p "برای ادامه Enter بزنید..." _
-}
-
 # Interactive folder browser.
 # Lets the user navigate directories one level at a time, like a file
 # manager: pick a subfolder by number, go up a level, or confirm the
@@ -24,30 +20,33 @@ browse_folder() {
     while true; do
         clear
         echo "=================================="
-        echo "   انتخاب پوشه"
+        echo "   Select Folder"
         echo "=================================="
-        echo "مسیر فعلی:"
+        echo "Current path:"
         echo "  $current"
         echo "----------------------------------"
 
-        # List subfolders only
-        mapfile -t SUBDIRS < <(find "$current" -mindepth 1 -maxdepth 1 -type d | sort)
+        mapfile -t SUBDIRS < <(find "$current" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
 
-        local i=1
-        for d in "${SUBDIRS[@]}"; do
-            echo "  $i) ${d##*/}/"
-            i=$((i+1))
-        done
+        if [ ${#SUBDIRS[@]} -eq 0 ]; then
+            echo "  (no subfolders here)"
+        else
+            local i=1
+            for d in "${SUBDIRS[@]}"; do
+                echo "  $i) ${d##*/}/"
+                i=$((i+1))
+            done
+        fi
 
         echo "----------------------------------"
-        echo "  0) ✔ همین پوشه رو انتخاب کن"
+        echo "  0) Select THIS folder"
         if [ "$current" != "/" ]; then
-            echo "  b) برگرد به پوشه بالاتر"
+            echo "  b) Go back (parent folder)"
         fi
-        echo "  q) لغو"
+        echo "  q) Cancel"
         echo
 
-        read -p "انتخاب شما: " choice
+        read -p "Choice: " choice
 
         case "$choice" in
             0)
@@ -76,26 +75,26 @@ browse_folder() {
 # Search for folders by keyword anywhere under a root, let the user pick.
 search_folder() {
     local root="$1"
-    read -p "بخشی از اسم پوشه رو بنویسید: " KEYWORD
+    read -p "Enter part of the folder name: " KEYWORD
     echo
-    echo "در حال جستجو..."
+    echo "Searching..."
     mapfile -t MATCHES < <(find "$root" -type d -iname "*$KEYWORD*" 2>/dev/null | sort)
 
     if [ ${#MATCHES[@]} -eq 0 ]; then
-        echo "هیچ پوشه‌ای با این نام پیدا نشد."
+        echo "No matching folder found."
         return 1
     fi
 
     echo
-    echo "پوشه‌های پیدا شده:"
+    echo "Folders found:"
     for i in "${!MATCHES[@]}"; do
         echo "  $((i+1))) ${MATCHES[$i]}"
     done
     echo
-    read -p "شماره پوشه مورد نظر رو وارد کنید: " CHOICE
+    read -p "Enter the number of the folder you want: " CHOICE
     idx=$((CHOICE-1))
     if [ -z "${MATCHES[$idx]}" ]; then
-        echo "انتخاب نامعتبر."
+        echo "Invalid choice."
         return 1
     fi
     echo "${MATCHES[$idx]}"
@@ -110,43 +109,43 @@ echo "   Manhwa Zip Password Remover"
 echo "=================================="
 echo
 
-read -s -p "رمز زیپ فایل‌ها رو وارد کنید: " PASSWORD
+read -s -p "Enter the zip password: " PASSWORD
 echo
 echo
 
-echo "می‌خواید روی چی اجرا بشه؟"
-echo "  1) مرور پوشه‌ها (مثل فایل‌منیجر، پوشه به پوشه)"
-echo "  2) جستجوی نام پوشه در کل حافظه"
-echo "  3) وارد کردن مسیر کامل به‌صورت دستی"
-read -p "انتخاب (1/2/3): " MODE
+echo "What do you want to run this on?"
+echo "  1) Browse folders (like a file manager, step by step)"
+echo "  2) Search folder name across the whole storage"
+echo "  3) Enter a full path manually"
+read -p "Choice (1/2/3): " MODE
 echo
 
 case "$MODE" in
     1)
         TARGET="$(browse_folder "$DEFAULT_START")"
-        [ $? -ne 0 ] && echo "لغو شد." && exit 1
+        [ $? -ne 0 ] && echo "Cancelled." && exit 1
         ;;
     2)
         TARGET="$(search_folder "$DEFAULT_START")"
         [ $? -ne 0 ] && exit 1
         ;;
     3)
-        read -p "مسیر کامل پوشه رو وارد کنید: " TARGET
+        read -p "Enter the full folder path: " TARGET
         ;;
     *)
-        echo "گزینه نامعتبر."
+        echo "Invalid option."
         exit 1
         ;;
 esac
 
 if [ ! -d "$TARGET" ]; then
-    echo "این مسیر پوشه معتبری نیست: $TARGET"
+    echo "Not a valid folder: $TARGET"
     exit 1
 fi
 
 clear
 echo "=================================="
-echo "در حال پردازش: $TARGET"
+echo "Processing: $TARGET"
 echo "=================================="
 echo
 
@@ -164,23 +163,23 @@ while IFS= read -r f; do
             rm "$f"
             (cd "$tmpdir" && zip -r -0 "../$name.zip" . > /dev/null)
             rm -rf "$tmpdir"
-            echo "✔ done: $(basename "$f")"
+            echo "[DONE] $(basename "$f")"
             DONE_COUNT=$((DONE_COUNT+1))
         else
-            echo "✘ failed (wrong password?): $(basename "$f")"
+            echo "[FAILED - wrong password?] $(basename "$f")"
             rm -rf "$tmpdir"
             FAILED_COUNT=$((FAILED_COUNT+1))
         fi
     else
-        echo "○ skip (not encrypted): $(basename "$f")"
+        echo "[SKIP - not encrypted] $(basename "$f")"
         SKIPPED_COUNT=$((SKIPPED_COUNT+1))
     fi
 done < <(find "$TARGET" -type f -iname "*.zip")
 
 echo
 echo "=================================="
-echo "تمام شد."
-echo "  انجام‌شده: $DONE_COUNT"
-echo "  ناموفق:   $FAILED_COUNT"
-echo "  رد شده:   $SKIPPED_COUNT"
+echo "Finished."
+echo "  Done:    $DONE_COUNT"
+echo "  Failed:  $FAILED_COUNT"
+echo "  Skipped: $SKIPPED_COUNT"
 echo "=================================="
